@@ -1,6 +1,6 @@
 - 👋 Hi, I’m @HayNaufal
 - 👀 I’m interested in Software Engineering
-- 🌱 I’m currently learning C++
+- 🌱 I’m currently learning C++ and Python
 - 📫 How to reach me Email: hayfanaufal111@gmail.com
 
 <!---
