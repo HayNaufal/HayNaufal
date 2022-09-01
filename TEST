@@ -5,7 +5,6 @@ Bot["brzz74"] = {
     messageId = "1012851060408328342", -- Webhook message id
     startFrom = 1, -- Start from in world list
     worldList = {
-        "YVDAI",
         "FCVQI",
         "ZLSQC",
         "KYXIY",
