@@ -6,7 +6,6 @@ Bot["brzz74"] = {
     startFrom = 1, -- Start from in world list
     worldList = {
         "FCVQI",
-        "ZLSQC",
         "KYXIY",
         "GGFIJ",
         "BPPFS",
