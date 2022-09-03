@@ -34,20 +34,6 @@ Bot["brzz75"] = {
     }, -- World list
     doorFarm = "QWERTYASD" -- Rotation world door id
 }
-Bot["bot3"] = {
-    webhookLink = "https://discord.com/api/webhooks/", -- Bot webhook link
-    messageId = "", -- Webhook message id
-    startFrom = 1, -- Start from in world list
-    worldList = {}, -- World list 
-    doorFarm = "" -- Rotation world door id
-}
-Bot["bot4"] = {
-    webhookLink = "https://discord.com/api/webhooks/", -- Bot webhook link
-    messageId = "", -- Webhook message id
-    startFrom = 1, -- Start from in world list
-    worldList = {}, -- World list
-    doorFarm = "" -- Rotation world door id
-}
 
 webhookLinkPack = "https://discord.com/api/webhooks/1013014596212248626/xJUSKYhIgGZCq_KdKgkbhJM9fmPaO7_MhKV_Vna_cOy50-EeIvfzIheNQNoQrs9wQkXS" -- Pack info webhook link
 messageIdPack = "1013014706610515998" -- Pack info message id
@@ -58,15 +44,25 @@ messageIdSeed = "1013014706610515998" -- Seed info message id
 storageSeed, doorSeed, patokanSeed = "LUPISABO", "QWERTYASD", 16 -- Seed storage world name, door id, and patokan
 storagePack, doorPack, patokanPack = "LUPISABO", "QWERTYASD", 20 -- Pack storage world name, door id, and patokan
 
-doorConfig = true -- Set false if not using door id from bot config
-doorFarm = "" -- Rotation world door id
+itmId = 4584 -- Block id
+itmSeed = itmId + 1 -- Seed id
+
+delayHarvest = 50 -- Harvesting delay
+delayPlant = 70 -- Planting delay
+delayPunch = 190 -- Punching delay
+delayPlace = 130 -- Placing delay
+
+tileNumber = 1 -- Customable from 1 to 5
+root = false -- Set true if harvesting max root
+buyAfterPNB = false -- Set true if buying and storing pack after each pnb
+looping = true -- Set false if not looping world
 
 customTile = false -- Set true if custom breaking pos
 customX = 0 -- Custom breaking pos x
 customY = 0 -- Custom breaking pos y
 
 whitelist = {"tumpabrik"} -- Player that will be whitelisted
-
+rejoinDelay = 10000 -- Delay of rejoining world after auto leave
 peopleEnter = "LEAVE" --[[
     Type :
     - BAN (auto ban)
@@ -74,20 +70,16 @@ peopleEnter = "LEAVE" --[[
     - NONE (do nothing)
 ]]
 
-rejoinDelay = 10000 -- Delay of rejoining world after auto leave
-
-separatePlant = true -- Set true if separate harvest and plant
+rotationType = "PLANTHV1" --[[
+    Type :
+    - PLANTHV1 (auto ban)
+    - PLANTHV2 (auto leave)
+    - HV (do nothing)
+    - COLLECT
+]]
 
 blacklistTile = false -- Set true if blacklist tile
 blacklist = {} -- Tile to blacklist
-
-itmId = 4584 -- Block id
-itmSeed = itmId + 1 -- Seed id
-
-tileNumber = 1 -- Customable from 1 to 5
-root = false -- Set true if harvesting max root
-buyPNB = false -- Set true if buying and storing pack after each pnb
-looping = true -- Set false if not looping world
 
 pack = "World Lock" -- Pack name to display on webhook
 packList = {242} -- List of pack id
@@ -95,17 +87,12 @@ packName = "world_lock" -- Pack name in store
 packPrice = 2000 -- Pack price
 packLimit = 200 -- Limit of buying pack before bp full
 
-delayHarvest = 50 -- Harvesting delay
-delayPlant = 70 -- Planting delay
-delayPunch = 190 -- Punching delay
-delayPlace = 130 -- Placing delay
+joinWorldAfterRotation = false -- Set true if join random world after each rotation
+worldToJoin = {} -- List of world to join after finishing 1 world
 
-randomJoin = false -- Set true if join random world after each rotation
-randomWorld = {}
-
-restartTime = false -- Set true if restart time of farm after looping
 customShow = false -- Set true if showing only custom amount of world
 showList = 3 -- Number of custom worlds to be shown
+restartTimer = false -- Set true if restart time of farm after looping
 
 items = {
     {name = "World Lock", id = 242, emote = "<:world_lock:1011929928519925820>"},
@@ -116,15 +103,7 @@ items = {
 goods = {itmId, itmSeed, 98, 18, 32, 6336, 9640} -- Items that wont be trashed (dont edit)
 
 ------------------ Dont Touch ------------------
-list = {}
-waktu = {}
-waktu = {}
-worlds = {}
-tileBreak = {}
-fossil = 0
-profit = 0
-listNow = 1
-t = os.time()
+list = {}, waktu = {}, worlds = {}, tileBreak = {}, fossil = 0, profit = 0, listNow = 1, t = os.time(), strWaktu = ""
 start = Bot[getBot().name].startFrom
 stop = #Bot[getBot().name].worldList
 totalList = #Bot[getBot().name].worldList
@@ -132,7 +111,6 @@ totalList = #Bot[getBot().name].worldList
 for i = Bot[getBot().name].startFrom,#Bot[getBot().name].worldList do
     table.insert(worlds,Bot[getBot().name].worldList[i])
 end
-
 if looping then
     for i = 0,Bot[getBot().name].startFrom - 1 do
         table.insert(worlds,Bot[getBot().name].worldList[i])
@@ -143,17 +121,10 @@ for _,pack in pairs(packList) do
     table.insert(goods,pack)
 end
 
-if doorConfig then
-    doorWorlds = Bot[getBot().name].doorFarm
-else
-    doorWorlds = doorFarm
-end
-
 for i = math.floor(tileNumber/2),1,-1 do
     i = i * -1
     table.insert(tileBreak,i)
 end
-
 for i = 0, math.ceil(tileNumber/2) - 1 do
     table.insert(tileBreak,i)
 end
@@ -168,7 +139,6 @@ function tilePunch(x,y)
     end
     return false
 end
-
 function tilePlace(x,y)
     for _,num in pairs(tileBreak) do
         if getTile(x - 1,y + num).fg == 0 and getTile(x - 1,y + num).bg == 0 then
@@ -212,21 +182,20 @@ function warp(world,id)
 end
 
 function waktuWorld()
-    local str = ""
+    strWaktu = ""
     if customShow then
         for i = showList,1,-1 do
             newList = listNow - i
             if newList <= 0 then
                 newList = newList + totalList
             end
-            str = str.."\n"..Bot[getBot().name].worldList[newList]:upper().." ( "..(waktu[Bot[getBot().name].worldList[newList]] or "?").." )"
+            strWaktu = strWaktu.."\n"..Bot[getBot().name].worldList[newList]:upper().." ( "..(waktu[Bot[getBot().name].worldList[newList]] or "?").." )"
         end
     else
         for _,world in pairs(Bot[getBot().name].worldList) do
-            str = str.."\n"..world:upper().." ( "..(waktu[world] or "?").." )"
+            strWaktu = strWaktu.."\n"..world:upper().." ( "..(waktu[world] or "?").." )"
         end
     end
-    return str
 end
 
 function includesString(table, string)
@@ -238,8 +207,8 @@ function includesString(table, string)
     return false
 end
 
-function enter()
-    if peopleEnter ~= "NONE" and #getPlayers() > 0 then
+function hook(varlist)
+    if varlist[0] == "OnSpawn" and peopleEnter ~= "NONE" then
         for _,player in pairs(getPlayers()) do
             if not includesString(whitelist, player.name) then
                 if peopleEnter == "BAN" then
@@ -252,7 +221,7 @@ function enter()
                     sendPacket(3, "action|quit_to_exit")
                     sleep(100)
                     sleep(rejoinDelay)
-                    warp(world,doorWorlds)
+                    warp(world,Bot[getBot().name].doorFarm)
                     sleep(1000)
                     while math.floor(getBot().x / 32) ~= x or math.floor(getBot().y / 32) ~= y do
                         findPath(x,y)
@@ -264,194 +233,70 @@ function enter()
     end
 end
 
-function waste()
-    xx = math.floor(getBot().x / 32)
-    yy = math.floor(getBot().y / 32)
-    wastee = false
-    for _,tile in pairs(getTiles()) do
-        if tile.fg == 778 then
-            wastee = true
-            for j = -2,2 do
-                for i = -1,1 do
-                    if tile.x + i >= 0 and tile.x + i <= 99 and tile.y + j >= 0 and tile.y + j <= 53 and getTile(tile.x + i,tile.y + j).flags == 0 then
-                        findPath(tile.x + i,tile.y + j)
-                        sleep(100)
-                        while getTile(tile.x,tile.y).fg == 778 do
-                            punch(-i,-j)
-                            sleep(200)
-                        end
-                    end
-                    if getTile(tile.x,tile.y).fg == 0 then
-                        break
-                    end
-                end
-                if getTile(tile.x,tile.y).fg == 0 then
-                    break
-                end
-            end
-        end
-    end
-    if wastee then
-        findPath(xx,yy)
-        sleep(100)
-    end
+addHook("hook",hook)
+
+function getCpu()
+    local cmd = io.popen('powershell -command "(Get-WmiObject win32_processor | Measure-Object -property LoadPercentage -Average | Select Average).Average"')
+    CPU = cmd:read("*l")
+    cmd:close()
+    return CPU
 end
 
-function botInfo(recon,info)
+function getRam()
+    local cmd = io.popen('powershell -command "$CompObject = Get-WmiObject -Class WIN32_OperatingSystem; $Ram = ((($CompObject.TotalVisibleMemorySize - $CompObject.FreePhysicalMemory)*100)/ $CompObject.TotalVisibleMemorySize); [Math]::Floor($Ram)"')
+    RAM = cmd:read("*l")
+    cmd:close()
+    return RAM
+end
+
+function botInfo(info)
     te = os.time() - t
-    if recon then
-        content = "@everyone"
-    else
-        content = ""
-    end
-    local text = [[
-        $webhookLink = "]]..Bot[getBot().name].webhookLink..[["
-        $messageId = "]]..Bot[getBot().name].messageId..[["
-        $start = "]]..start..[["
-        $stop = "]]..stop..[["
-        $hari = "]]..math.floor(te/86400)..[["
-        $jam = "]]..math.floor(te%86400/3600)..[["
-        $menit = "]]..math.floor(te%86400%3600/60)..[["
-        $pack = "]]..pack..[["
-        $profit = "]]..profit..[["
-        $color = "]]..math.random(1111111,9999999)..[["
-        $webHookUrl = "$webhookLink/messages/$messageId"
-        $CPU = Get-WmiObject Win32_Processor | Measure-Object -Property LoadPercentage -Average | Select -ExpandProperty Average
-        $CompObject =  Get-WmiObject -Class WIN32_OperatingSystem
-        $Memory = ((($CompObject.TotalVisibleMemorySize - $CompObject.FreePhysicalMemory)*100)/ $CompObject.TotalVisibleMemorySize)
-        $RAM = [math]::Round($Memory, 0)
-        $thumbnailObject = @{
-            url = "https://komikkamvret.com/wp-content/uploads/2021/04/Pus-Nyangami-Roger-1024x978.png"
-        }
-        $footerObject = @{
-            text = "]]..os.date("!%a %b %d, %Y at %I:%M %p", os.time() + 7 * 60 * 60)..[["
-        }
-        $fieldArray = @(
-            @{
-                name = "<:pickaxe:1011931845065183313> Bot Info"
-                value = "]]..info..[["
-                inline = "false"
-            }
-            @{
-                name = "<:birth_certificate:1011929949076193291> Bot Name"
-                value = "]]..getBot().name..[["
-                inline = "true"
-            }
-            @{
-                name = "<:heart_monitor:1012587208902987776> Bot Status"
-                value = "]]..getBot().status:upper()..[["
-                inline = "true"
-            }
-            @{
-                name = "<:gems:1011931178510602240> Bot Gems"
-                value = "]]..findItem(112)..[["
-                inline = "true"
-            }
-            @{
-                name = "<:globe:1011929997679796254> World Name"
-                value = "]]..getBot().world..[["
-                inline = "true"
-            }
-            @{
-                name = "<:growtopia_scroll:1011972982261944444> World Order"
-                value = "$start / $stop"
-                inline = "true"
-            }
-            @{
-                name = "<:fossil_rock:1011972962573881464> World Fossil"
-                value = "]]..fossil..[["
-                inline = "true"
-            }
-            @{
-                name = "<:shop_sign:1012590603172847648> Pack Name"
-                value = "$pack"
-                inline = "true"
-            }
-            @{
-                name = "<:guest_book:1012588503466528869> Bot Profit"
-                value = "$profit $pack"
-                inline = "true"
-            }
-            @{
-                name = "<:CPU:994981162588053565> CPU & RAM"
-                value = "$CPU% | $RAM%"
-                inline = "true"
-            }
-            @{
-                name = "<:change_of_address:1012566655995490354> World List"
-                value = "]]..waktuWorld()..[["
-                inline = "false"
-            }
-            @{
-                name = "<:growtopia_clock:1011929976628596746> Bot Uptime"
-                value = "$hari Days $jam Hours $menit Minutes"
-                inline = "false"
-            }
-        )
-        $embedObject = @{
-            title = "<:exclamation_sign:1011934940096630794> **BOT INFORMATION**"
-            color = $color
-            thumbnail = $thumbnailObject
-            footer = $footerObject
-            fields = $fieldArray
-        }
-        $embedArray = @($embedObject)
-        $payload = @{
-            content = "]]..content..[["
-            embeds = $embedArray
-        }
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        Invoke-RestMethod -Uri $webHookUrl -Body ($payload | ConvertTo-Json -Depth 4) -Method Patch -ContentType 'application/json'
-    ]]
-    local file = io.popen("powershell -command -", "w")
-    file:write(text)
-    file:close()
+    wh = {}
+    wh.url = Bot[getBot().name].webhookLink.."/messages/"..Bot[getBot().name].messageId
+    wh.embed = [[{
+        "title": "<:exclamation_sign:1011934940096630794> **BOT INFORMATION**",
+        "fields" : [
+            {"name": "<:pickaxe:1011931845065183313> Bot Info","value": "]]..info..[[","inline": "false"},
+            {"name": "<:birth_certificate:1011929949076193291> Bot Name","value": "]]..getBot().name..[[","inline": "true"},
+            {"name": "<:heart_monitor:1012587208902987776> Bot Status","value": "]]..getBot().status..[[","inline": "true"},
+            {"name": "<:gems:1011931178510602240> Bot Gems","value": "]]..findItem(112)..[[","inline": "true"},
+            {"name": "<:globe:1011929997679796254> World Name","value": "]]..getBot().world..[[","inline": "true"},
+            {"name": "<:growtopia_scroll:1011972982261944444> World Order","value": "]]..start..[[ / ]]..stop..[[","inline": "true"},
+            {"name": "<:fossil_rock:1011972962573881464> World Fossil","value": "]]..fossil..[[","inline": "true"},
+            {"name": "<:shop_sign:1012590603172847648> Pack Name","value": "]]..pack..[[","inline": "true"},
+            {"name": "<:guest_book:1012588503466528869> Bot Profit","value": "]]..profit..[[ ]]..pack..[[","inline": "true"},
+            {"name": "<:CPU:994981162588053565> CPU & RAM","value": "]]..getCpu()..[[% | ]]..getRam()..[[%","inline": "true"},
+            {"name": "<:change_of_address:1012566655995490354> World List","value": "]]..strWaktu..[[","inline": "false"},
+            {"name": "<:growtopia_clock:1011929976628596746> Bot Uptime","value": "]]..math.floor(te/86400)..[[ Days ]]..math.floor(te%86400/3600)..[[ Hours ]]..math.floor(te%86400%3600/60)..[[ Minutes","inline": "false"}
+            ],
+        "thumbnail": {"url": "https://komikkamvret.com/wp-content/uploads/2021/04/Pus-Nyangami-Roger-1024x978.png"},
+        "color": "]]..math.random(1111111,9999999)..[[",
+        "footer": {"text": "]]..os.date("!%a %b %d, %Y at %I:%M %p", os.time() + 7 * 60 * 60)..[["}
+    }]]
+    wh.edit = true
+    webhook(wh)
 end
 
-function packInfo(ping,desc)
-    if ping then
-        webhookLinkk = webhookLinkPack
-        messageIdd = messageIdPack
-    else
-        webhookLinkk = webhookLinkSeed
-        messageIdd = messageIdSeed
-    end
-    local text = [[
-        $webhookLink = "]]..webhookLinkk..[["
-        $messageId = "]]..messageIdd..[["
-        $webHookUrl = "$webhookLink/messages/$messageId"
-        $description = "]]..desc..[["
-        $color = "]]..math.random(111111,999999)..[["
-        $thumbnailObject = @{
-            url = "https://komikkamvret.com/wp-content/uploads/2021/04/Pus-Nyangami-Roger-1024x978.png"
-        }
-        $footerObject = @{
-            text = "]]..os.date("!%a %b %d, %Y at %I:%M %p", os.time() + 7 * 60 * 60)..[["
-        }
-        $fieldArray = @(
-            @{
-                name = "Dropped Items"
-                value = "]]..desc..[["
-                inline = "false"
-            }
-        )
-        $embedObject = @{
-            title = "<:exclamation_sign:1011934940096630794> **PACK/SEED INFORMATION**"
-            color = $color
-            thumbnail = $thumbnailObject
-            footer = $footerObject
-            fields = $fieldArray
-        }
-        $embedArray = @($embedObject)
-        $payload = @{
-            embeds = $embedArray
-        }
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        Invoke-RestMethod -Uri $webHookUrl -Body ($payload | ConvertTo-Json -Depth 4) -Method Patch -ContentType 'application/json'
-    ]]
-    local file = io.popen("powershell -command -", "w")
-    file:write(text)
-    file:close()
+function packInfo(link,id,desc)
+    wh = {}
+    wh.url = link.."/messages/"..id
+    wh.embed = [[{
+        "title": "<:exclamation_sign:1011934940096630794> **PACK/SEED INFORMATION**",
+        "fields" : [{"name": "Dropped Items","value": "]]..desc..[["}],
+        "thumbnail": {"url": "https://komikkamvret.com/wp-content/uploads/2021/04/Pus-Nyangami-Roger-1024x978.png"},
+        "color": "]]..math.random(1111111,9999999)..[[",
+        "footer": {"text": "]]..os.date("!%a %b %d, %Y at %I:%M %p", os.time() + 7 * 60 * 60)..[["}
+    }]]
+    wh.edit = true
+    webhook(wh)
+end
+
+function reconInfo()
+    wh = {}
+    wh.url = Bot[getBot().name].webhookLink.."/messages/"..Bot[getBot().name].messageId
+    wh.content = getBot().name.." status is "..getBot().status.."@everyone"
+    wh.edit = false
+    webhook(wh)
 end
 
 function faceLeft()
@@ -465,20 +310,23 @@ end
 
 function reconnect(world,id,x,y)
     if getBot().status ~= "online" then
-        botInfo(true,"Reconnecting")
+        botInfo("Reconnecting")
         sleep(100)
-        while true do
-            if getBot().status == "suspended" then
-                botInfo(true,"Bot Suspended!")
-                sleep(100)
-                while true do
-                    sleep(10000)
-                end
-            elseif getBot().status ~= "online" then
-                connect()
+        reconInfo()
+        sleep(100)
+        if getBot().status == "suspended" then
+            botInfo("Suspended")
+            sleep(100)
+            reconInfo()
+            sleep(100)
+            while true do
                 sleep(10000)
             end
-            if getBot().status == "online" and getBot().world ~= world:upper() then
+        end
+        while true do
+            connect()
+            sleep(10000)
+            while getBot().status == "online" and getBot().world ~= world:upper() do
                 sendPacket(3,"action|join_request\nname|"..world:upper())
                 sleep(5000)
             end
@@ -496,7 +344,9 @@ function reconnect(world,id,x,y)
                 break
             end
         end
-        botInfo(true,"Succesfully Reconnected")
+        botInfo("Succesfully Reconnected")
+        sleep(100)
+        reconInfo()
         sleep(100)
     end
 end
@@ -528,13 +378,15 @@ function storePack()
                     while math.floor(getBot().x / 32) ~= (tile.x + 1) or math.floor(getBot().y / 32) ~= tile.y do
                         findPath(tile.x + 1,tile.y)
                         sleep(100)
-                        faceLeft()
-                        sleep(100)
+                        reconnect(storagePack,doorPack,tile.x + 1,tile.y)
                     end
                     while findItem(pack) > 0 and tileDrop(tile.x,tile.y,findItem(pack)) do
+                        faceLeft()
+                        sleep(100)
                         sendPacket(2,"action|drop\n|itemID|"..pack)
                         sendPacket(2,"action|dialog_return\ndialog_name|drop_item\nitemID|"..pack.."|\ncount|"..findItem(pack))
                         sleep(500)
+                        reconnect(storagePack,doorPack,tile.x + 1,tile.y)
                     end
                 end
             end
@@ -574,8 +426,6 @@ function infoPack()
 end
 
 function storeSeed(world)
-    collectSet(false,3)
-    sleep(100)
     warp(storageSeed,doorSeed)
     sleep(100)
     for _,tile in pairs(getTiles()) do
@@ -584,13 +434,15 @@ function storeSeed(world)
                 while math.floor(getBot().x / 32) ~= (tile.x + 1) or math.floor(getBot().y / 32) ~= tile.y do
                     findPath(tile.x + 1,tile.y)
                     sleep(100)
-                    faceLeft()
-                    sleep(100)
+                    reconnect(storageSeed,doorSeed,tile.x + 1,tile.y)
                 end
                 while findItem(itmSeed) >= 100 and tileDrop(tile.x,tile.y,100,true) do
+                    faceLeft()
+                    sleep(100)
                     sendPacket(2,"action|drop\n|itemID|"..itmSeed)
                     sendPacket(2,"action|dialog_return\ndialog_name|drop_item\nitemID|"..itmSeed.."|\ncount|100")
                     sleep(500)
+                    reconnect(storageSeed,doorSeed,tile.x + 1,tile.y)
                 end
             end
             if findItem(itmSeed) < 100 then
@@ -598,36 +450,36 @@ function storeSeed(world)
             end
         end
     end
-    packInfo(false,infoPack())
+    packInfo(webhookLinkSeed,messageIdSeed,infoPack())
     sleep(100)
-    warp(world,doorWorlds)
-    sleep(100)
-    collectSet(true,3)
+    warp(world,Bot[getBot().name].doorFarm)
     sleep(100)
 end
 
 function buy()
     if findItem(112) >= packPrice then
-        collectSet(false,3)
-        sleep(100)
         warp(storagePack,doorPack)
         sleep(100)
         while findItem(112) >= packPrice do
             countBuy = 0
-            botInfo(false,"Buying Pack")
-            sleep(100)
-            while findItem(112) >= packPrice and countBuy < packLimit do
-                sendPacket(2,"action|buy\nitem|"..packName)
-                sleep(500)
-                profit = profit + 1
-                countBuy = countBuy + 1
+            while findItem(112) >= packPrice do
+                if countBuy < packLimit do
+                    if getBot().slots - #getInventory() < 10 then
+                        sendPacket(2,"action|buy\nitem|upgrade_backpack")
+                        sleep(500)
+                    end
+                    sendPacket(2,"action|buy\nitem|"..packName)
+                    sleep(500)
+                    profit = profit + 1
+                    countBuy = countBuy + 1
+                end
+                reconnect(storagePack,doorPack)
             end
-            botInfo(false,"Storing Pack")
-            sleep(100)
             storePack()
             sleep(100)
+            reconnect(storagePack,doorPack)
         end
-        packInfo(true,infoPack())
+        packInfo(webhookLinkPack,messageIdPack,infoPack())
         sleep(100)
     end
 end
@@ -672,15 +524,13 @@ function pnb(world)
             findPath(ex,ye)
             sleep(100)
         end
-        while findItem(itmId) >= 5 and findItem(itmSeed) < 190 do
+        while findItem(itmId) >= tileNumber and findItem(itmSeed) < 190 do
             while tilePlace(ex,ye) do
                 for _,i in pairs(tileBreak) do
                     if getTile(ex - 1,ye + i).fg == 0 and getTile(ex - 1,ye + i).bg == 0 then
                         place(itmId,-1,i)
                         sleep(delayPlace)
-                        enter()
-                        waste()
-                        reconnect(world,doorWorlds,ex,ye)
+                        reconnect(world,Bot[getBot().name].doorFarm,ex,ye)
                     end
                 end
             end
@@ -689,13 +539,12 @@ function pnb(world)
                     if getTile(ex - 1,ye + i).fg ~= 0 or getTile(ex - 1,ye + i).bg ~= 0 then
                         punch(-1,i)
                         sleep(delayPunch)
-                        enter()
-                        waste()
-                        reconnect(world,doorWorlds,ex,ye)
+                        reconnect(world,Bot[getBot().name].doorFarm,ex,ye)
                     end
                 end
             end
-            reconnect(world,doorWorlds,ex,ye)
+            collect(3)
+            reconnect(world,Bot[getBot().name].doorFarm,ex,ye)
         end
         clear()
         sleep(100)
@@ -703,172 +552,123 @@ function pnb(world)
             plant(world)
             sleep(100)
         elseif findItem(itmSeed) >= 190 then
-            botInfo(false,"Storing Seed")
+            botInfo("Storing Seed")
             sleep(100)
             storeSeed(world)
             sleep(100)
-            botInfo(false,"Farming")
+            botInfo("Farming")
             sleep(100)
         end
-        if buyPNB and findItem(112) >= packPrice then
+        if buyAfterPNB and findItem(112) >= packPrice then
             buy()
             sleep(100)
-            warp(world,doorWorlds)
+            warp(world,Bot[getBot().name].doorFarm)
             sleep(100)
-            collectSet(true,3)
-            sleep(100)
-            botInfo(false,"Farming")
+            botInfo("Farming")
             sleep(100)
         end
     end
 end
 
 function take(world)
-    collectSet(false,3)
-    sleep(100)
-    warp(storageSeed,doorSeed)
-    sleep(100)
-    for _,obj in pairs(getObjects()) do
-        if obj.id == itmSeed then
-            findPath(round(obj.x / 32),math.floor(obj.y / 32))
-            sleep(1000)
-            collect(2)
-            sleep(1000)
+    while findItem(itmSeed) == 0 do
+        warp(storageSeed,doorSeed)
+        sleep(100)
+        for _,obj in pairs(getObjects()) do
+            if obj.id == itmSeed then
+                findPath(round(obj.x / 32),math.floor(obj.y / 32))
+                sleep(1000)
+                collect(2)
+                sleep(1000)
+            end
+            if findItem(itmSeed) > 0 then
+                break
+            end
         end
-        if findItem(itmSeed) > 0 then
-            break
-        end
+        warp(world,Bot[getBot().name].doorFarm)
+        sleep(100)
     end
-    warp(world,doorWorlds)
-    sleep(100)
-    collectSet(true,3)
-    sleep(100)
 end
 
 function plant(world)
     for _,tile in pairs(getTiles()) do
         if findItem(itmSeed) == 0 then
-            botInfo(false,"Taking Seed")
+            botInfo("Taking Seed")
             sleep(100)
             take(world)
             sleep(100)
-            botInfo(false,"Farming")
+            botInfo("Farming")
             sleep(100)
         end
-        if tile.flags ~= 0 and getTile(tile.x,tile.y - 1).fg == 0 then
+        if tile.flags ~= 0 and tile.y ~= 0 and getTile(tile.x,tile.y - 1).fg == 0 then
             if not blacklistTile or check(tile.x,tile.y) then
                 findPath(tile.x,tile.y - 1)
                 while getTile(tile.x,tile.y - 1).fg == 0 do
                     place(itmSeed,0,0)
                     sleep(delayPlant)
-                    enter()
-                    waste()
-                    reconnect(world,doorWorlds,tile.x,tile.y - 1)
+                    reconnect(world,Bot[getBot().name].doorFarm,tile.x,tile.y - 1)
                 end
             end
         end
     end
     if findItem(itmSeed) >= 100 then
-        botInfo(false,"Storing Seed")
+        botInfo("Storing Seed")
         sleep(100)
         storeSeed(world)
         sleep(100)
-        botInfo(false,"Farming")
+        botInfo("Farming")
         sleep(100)
     end
 end
 
-function harvest(world)
-    botInfo(false,"Farming")
-    sleep(100)
-    if separatePlant then
-        for _,tile in pairs(getTiles()) do
-            if getTile(tile.x,tile.y - 1).ready and getTile(tile.x,tile.y - 1).fg == itmSeed then
+function rotation(world)
+    for _,tile in pairs(getTiles()) do
+        if findItem(itmSeed) == 0 then
+            botInfo("Taking Seed")
+            sleep(100)
+            take(world)
+            sleep(100)
+            botInfo("Farming")
+            sleep(100)
+        end
+        if tile.flags ~= 0 and tile.y ~= 0 then
+            if getTile(tile.x,tile.y - 1).ready or getTile(tile.x,tile.y - 1).fg == 0 then
                 if not blacklistTile or check(tile.x,tile.y) then
                     findPath(tile.x,tile.y - 1)
                     while getTile(tile.x,tile.y - 1).fg == itmSeed do
                         punch(0,0)
                         sleep(delayHarvest)
-                        enter()
-                        waste()
-                        reconnect(world,doorWorlds,tile.x,tile.y - 1)
+                        collect(2)
+                        reconnect(world,Bot[getBot().name].doorFarm,tile.x,tile.y - 1)
                     end
                     if root then
                         countHit = 0
                         while getTile(tile.x, tile.y).fg == (itmId + 4) do
                             punch(0, 1)
                             sleep(delayHarvest)
-                            enter()
-                            waste()
                             countHit = countHit + 1
-                            if countHit == 2 then
+                            if countHit == 3 then
                                 sleep(3000)
                                 countHit = 0
                             end
-                            reconnect(world,doorWorlds,tile.x,tile.y - 1)
+                            reconnect(world,Bot[getBot().name].doorFarm,tile.x,tile.y - 1)
                         end
                         clear()
                         sleep(100)
                     end
-                end
-            end
-            if findItem(itmId) >= 190 then
-                pnb(world)
-                sleep(100)
-            end
-        end
-    else
-        for _,tile in pairs(getTiles()) do
-            if findItem(itmSeed) == 0 then
-                botInfo(false,"Taking Seed")
-                sleep(100)
-                take(world)
-                sleep(100)
-                botInfo(false,"Farming")
-                sleep(100)
-            end
-            if tile.flags ~= 0 then
-                if getTile(tile.x,tile.y - 1).ready or getTile(tile.x,tile.y - 1).fg == 0 then
-                    if not blacklistTile or check(tile.x,tile.y) then
-                        findPath(tile.x,tile.y - 1)
-                        while getTile(tile.x,tile.y - 1).fg == itmSeed do
-                            punch(0,0)
-                            sleep(delayHarvest)
-                            enter()
-                            waste()
-                            reconnect(world,doorWorlds,tile.x,tile.y - 1)
-                        end
-                        if root then
-                            countHit = 0
-                            while getTile(tile.x, tile.y).fg == (itmId + 4) do
-                                punch(0, 1)
-                                sleep(delayHarvest)
-                                enter()
-                                waste()
-                                countHit = countHit + 1
-                                if countHit == 2 then
-                                    sleep(3000)
-                                    countHit = 0
-                                end
-                                reconnect(world,doorWorlds,tile.x,tile.y - 1)
-                            end
-                            clear()
-                            sleep(100)
-                        end
+                    if rotationType == "PLANTHV2" then
                         while getTile(tile.x,tile.y - 1).fg == 0 do
                             place(itmSeed,0,0)
                             sleep(delayPlant)
-                            enter()
-                            waste()
-                            reconnect(world,doorWorlds,tile.x,tile.y - 1)
+                            reconnect(world,Bot[getBot().name].doorFarm,tile.x,tile.y - 1)
                         end
                     end
                 end
             end
-            if findItem(itmId) >= 190 then
-                pnb(world)
-                sleep(100)
-            end
+        end
+        if findItem(itmId) >= 190 then
+            pnb(world)
+            sleep(100)
         end
     end
 end
@@ -885,17 +685,17 @@ end
 while true do
     for index,world in pairs(worlds) do
         if findItem(itmSeed) > 0 then
-            warp(world,doorWorlds)
-            sleep(100)
-            collectSet(true,3)
+            warp(world,Bot[getBot().name].doorFarm)
             sleep(100)
         else
-            botInfo(false,"Taking Seed")
+            botInfo("Taking Seed")
             sleep(100)
             take(world)
             sleep(100)
         end
-        botInfo(false,"Starting "..world)
+        waktuWorld()
+        sleep(100)
+        botInfo("Starting "..world)
         sleep(1000)
         tt = os.time()
         listNow = index
@@ -910,11 +710,11 @@ while true do
         buy()
         sleep(100)
         tt = os.time() - tt
-        botInfo(false,"Finished "..world)
+        botInfo("Finished "..world)
         sleep(100)
         waktu[world] = math.floor(tt / 3600).." Hours "..math.floor(tt % 3600 / 60).." Minutes"
-        if randomJoin then
-            for _,v in pairs(randomWorld) do
+        if joinWorldAfterRotation then
+            for _,v in pairs(worldToJoin) do
                 while getBot().world ~= v:upper() do
                     sendPacket(3,"action|join_request\nname|"..v:upper())
                     sleep(5000)
@@ -924,14 +724,14 @@ while true do
         if start < stop then
             start = start + 1
         else
-            if restartTime then
+            if restartTimer then
                 waktu = {}
             end
             start = 1
         end
     end
     if not looping then
-        botInfo(true,"Finished All World, Removing Bot !")
+        botInfo("Finished All World, Removing Bot !")
         sleep(100)
         removeBot(getBot().name)
         break
